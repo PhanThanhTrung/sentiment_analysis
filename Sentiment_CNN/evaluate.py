@@ -68,7 +68,7 @@ if __name__ == '__main__':
     test_y = np.array(label_data)
     y_predict = model.predict(test_data)
     top_classes = np.argmax(y_predict, axis=1)
-    nums_samples = test_y.shape
-    wrong_prediction = np.sum(top_classes-test_y)
+    nums_samples = test_y.shape[0]
+    wrong_prediction = np.sum(np.abs(top_classes-test_y))
     true_prediction = nums_samples - wrong_prediction
     print("accuracy on test set: {}".format(true_prediction/nums_samples))
