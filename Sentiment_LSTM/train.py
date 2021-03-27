@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 from keras.utils.np_utils import to_categorical
 import re
 import glob 
-path= '/Users/hit.fluoxetine/Dataset/nlp/data_train/'
+data_path= '/Users/hit.fluoxetine/Dataset/nlp/data_train/'
 def readdata(path):
     all_data = []
     all_label =[]
@@ -25,44 +25,46 @@ def readdata(path):
             else:
                 all_label.append([1,0])
     return all_data, all_label
-reviews, labels = readdata(path)
 
-max_fatures = 2000
-tokenizer = Tokenizer(num_words=max_fatures, split=' ')
-tokenizer.fit_on_texts(reviews)
-X = tokenizer.texts_to_sequences(reviews)
-X = pad_sequences(X)
-Y = np.array(labels, np.float32)
-X_train, X_test, Y_train, Y_test = train_test_split(X,Y, test_size = 0.33, random_state = 42)
-print(X_train.shape,Y_train.shape)
-print(X_test.shape,Y_test.shape)
+if __name__ == '__main__':
+    reviews, labels = readdata(data_path)
 
-embed_dim = 128
-lstm_out = 196
+    max_fatures = 2000
+    tokenizer = Tokenizer(num_words=max_fatures, split=' ')
+    tokenizer.fit_on_texts(reviews)
+    X = tokenizer.texts_to_sequences(reviews)
+    X = pad_sequences(X)
+    Y = np.array(labels, np.float32)
+    X_train, X_test, Y_train, Y_test = train_test_split(X,Y, test_size = 0.33, random_state = 42)
+    print(X_train.shape,Y_train.shape)
+    print(X_test.shape,Y_test.shape)
 
-model = Sequential()
-model.add(Embedding(max_fatures, embed_dim,input_length = X.shape[1]))
-model.add(SpatialDropout1D(0.4))
-model.add(LSTM(lstm_out, dropout=0.2, recurrent_dropout=0.2))
-model.add(Dense(128,activation='softmax'))
-model.add(Dropout(0.2))
-model.add(Dense(2,activation='softmax'))
-model.compile(loss = 'categorical_crossentropy', optimizer='adam',metrics = ['accuracy'])
-print(model.summary())
+    embed_dim = 128
+    lstm_out = 196
 
-tensorboard_callback = keras.callbacks.TensorBoard('./logs_LSTM', update_freq=1)
-adam = keras.optimizers.Adam()
-model.compile(loss='categorical_crossentropy',
-            optimizer=adam,
-            metrics=['accuracy'])
-epochs = 10
-batch_size = 32
-model.fit(X_train, Y_train, 
-            batch_size = batch_size, 
-            verbose=1, epochs=epochs, 
-            callbacks=[tensorboard_callback], 
-            validation_data=(X_test, Y_test))
-model.save('1_models.h5')
+    model = Sequential()
+    model.add(Embedding(max_fatures, embed_dim,input_length = X.shape[1]))
+    model.add(SpatialDropout1D(0.4))
+    model.add(LSTM(lstm_out, dropout=0.2, recurrent_dropout=0.2))
+    model.add(Dense(128,activation='softmax'))
+    model.add(Dropout(0.2))
+    model.add(Dense(2,activation='softmax'))
+    model.compile(loss = 'categorical_crossentropy', optimizer='adam',metrics = ['accuracy'])
+    print(model.summary())
+
+    tensorboard_callback = keras.callbacks.TensorBoard('./logs_LSTM', update_freq=1)
+    adam = keras.optimizers.Adam()
+    model.compile(loss='categorical_crossentropy',
+                optimizer=adam,
+                metrics=['accuracy'])
+    epochs = 10
+    batch_size = 32
+    model.fit(X_train, Y_train, 
+                batch_size = batch_size, 
+                verbose=1, epochs=epochs, 
+                callbacks=[tensorboard_callback], 
+                validation_data=(X_test, Y_test))
+    model.save('1_models.h5')
 
 
 

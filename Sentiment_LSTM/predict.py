@@ -8,12 +8,13 @@ import pickle
 
 text = 'Đồ ăn ở đây rất ngon.'
 model_path = './models.h5'
+tokenizer_path = './tokenizer.pickle'
 
 if __name__=='__main__':
     model= load_model(model_path)
     max_fatures = 2000
     tokenizer = Tokenizer(num_words=max_fatures, split=' ')
-    with open('./tokenizer.pickle', 'rb') as handle:
+    with open(tokenizer_path, 'rb') as handle:
         tokenizer = pickle.load(handle)
     
     X= tokenizer.texts_to_sequences(text)

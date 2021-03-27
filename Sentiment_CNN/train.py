@@ -12,8 +12,7 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from tqdm import tqdm
 
-path = './data/'
-
+data_path= '/Users/hit.fluoxetine/Dataset/nlp/data_train/'
 
 model_embedding = word2vec.KeyedVectors.load('./word_embedding.model')
 
@@ -52,8 +51,8 @@ def readdata(path):
     return all_data, all_label
 
 if __name__ == '__main__':
-    path= '/Users/hit.fluoxetine/Dataset/nlp/data_train/'
-    train_cmt, train_label = readdata(path+'train/')
+    
+    train_cmt, train_label = readdata(data_path+'train/')
     train_data = []
     label_data = []
 
@@ -68,8 +67,7 @@ if __name__ == '__main__':
         else:
             label_data.append([0,1])
 
-    path= '/Users/hit.fluoxetine/Dataset/nlp/data_train/'
-    test_cmt, test_label = readdata(path+'test/')
+    test_cmt, test_label = readdata(data_path+'test/')
     test_data = []
     test_set = []
 

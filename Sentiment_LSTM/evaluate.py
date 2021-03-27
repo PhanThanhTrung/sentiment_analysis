@@ -9,7 +9,6 @@ import glob
 model_path = './models.h5'
 tokenizer_path = './tokenizer.pickle'
 data_path= '/Users/hit.fluoxetine/Dataset/nlp/data_test/'
-
 def readdata(path):
     all_data = []
     all_label =[]
@@ -30,7 +29,7 @@ if __name__ == '__main__':
     model = load_model(model_path)
     max_fatures = 2000
     tokenizer = Tokenizer(num_words=max_fatures, split=' ')
-    with open('./tokenizer.pickle', 'rb') as handle:
+    with open(tokenizer_path, 'rb') as handle:
         tokenizer = pickle.load(handle)
     reviews, labels = readdata(data_path)
     labels= np.array(labels)
