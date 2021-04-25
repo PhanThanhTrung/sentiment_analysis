@@ -21,9 +21,9 @@ from lstm import LSTM
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-# from clearml import Task
-# task = Task.init(project_name='sentiment_analysis',
-#                  task_name='25042021_LSTM_bidirectional_2layer_word2vec')
+from clearml import Task
+task = Task.init(project_name='sentiment_analysis',
+                 task_name='25042021_LSTM_bidirectional_2layer_word2vec')
 
 
 def main(args):
