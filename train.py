@@ -8,6 +8,7 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 import tqdm
+from clearml import Task
 from CocCocTokenizer import PyTokenizer
 from gensim.models import KeyedVectors, Word2Vec
 from tensorboardX import SummaryWriter
@@ -21,7 +22,7 @@ from lstm import LSTM
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-from clearml import Task
+
 task = Task.init(project_name='sentiment_analysis',
                  task_name='25042021_LSTM_bidirectional_2layer_word2vec')
 
@@ -29,16 +30,16 @@ task = Task.init(project_name='sentiment_analysis',
 def main(args):
     device = torch.device(
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
-    
+
     os.makedirs(args.log_dir, exist_ok=True)
-    
+
     params = {
         "batch_size": args.batch_size,
         "shuffle": True,
         "num_workers": args.num_workers,
         "collate_fn": lambda x: [[elem[0] for elem in x], [elem[1] for elem in x]]
     }
-    
+
     # initiate a train generator
     train_data_path = os.path.join(args.data_path, 'train')
     train_loader = DatasetLoader(train_data_path, args.embedding_model_path)
@@ -49,11 +50,11 @@ def main(args):
     val_loader = DatasetLoader(val_data_path, args.embedding_model_path)
     val_generator = DataLoader(val_loader, **params)
     vocab_size = train_loader.vocab_size
-    
+
     # initiate a writer
     writer = SummaryWriter()
-    
-    #initialize a criterion
+
+    # initialize a criterion
     criterion = FocalLoss()
 
     # initiate model
@@ -63,10 +64,10 @@ def main(args):
     # initialize an optimizer
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
 
-    #initialize a learning rate scheduler
+    # initialize a learning rate scheduler
     scheduler = lr_scheduler.CosineAnnealingLR(
-            optimizer, len(train_generator))
-    
+        optimizer, len(train_generator))
+
     train_loss = 0
     train_accuracy = 0
     log_iter_loss = 0
@@ -78,7 +79,7 @@ def main(args):
             labels = torch.tensor(labels)
             if len(labels.size()) == 0:
                 labels = torch.tensor([labels]).to(device)
-            
+
             text_lengths = list(map(len, comments))
             padded = torch.nn.utils.rnn.pad_sequence(
                 comments, batch_first=True)
@@ -157,7 +158,8 @@ def main(args):
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description="Training Sentiment Analysis.")
+    parser = argparse.ArgumentParser(
+        description="Training Sentiment Analysis.")
     parser.add_argument("--embedding_model_path", type=str, required=True,
                         help="path to embedding model")
     parser.add_argument("--data_path", type=str, required=True,
