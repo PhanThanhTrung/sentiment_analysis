@@ -58,7 +58,7 @@ def main(args):
     criterion = FocalLoss()
 
     # initiate model
-    model = LSTM(vocab_size=vocab_size, embedding_dim=400, hidden_dim=2000,
+    model = LSTM(vocab_size=vocab_size, embedding_dim=400, hidden_dim=256,
                  num_classes=args.num_classes, n_layers=2, bidirectional=True, dropout=0.5)
 
     # initialize an optimizer
