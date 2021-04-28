@@ -26,10 +26,7 @@ class DatasetLoader(Dataset):
 
         if embedding_model_path is not None and os.path.exists(embedding_model_path):
             self.word2vec_model = KeyedVectors.load_word2vec_format(embedding_model_path, binary=True)
-            word_labels = []
-            for key in self.word2vec_model.vocab.keys():
-                word_labels.append(key)
-            self.vocab = word_labels
+            self.vocab = self.word2vec_model.index_to_key
 
     def __len__(self):
         return len(self.file_path_and_type)

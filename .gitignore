@@ -4,6 +4,5 @@ __pycache__/
 *.pth
 *.pt
 *.model
-*.bin 
 *.h5
 *.pickle
