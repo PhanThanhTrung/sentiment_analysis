@@ -31,7 +31,8 @@ def main(args):
     device = torch.device(
         'cuda') if torch.cuda.is_available() else torch.device('cpu')
 
-    os.makedirs(args.log_dir, exist_ok=True)
+    os.makedirs(args.log_dir+'/model/', exist_ok=True)
+    os.makedirs(args.log_dir+'/state_dict/', exist_ok=True)
 
     params = {
         "batch_size": args.batch_size,
@@ -93,58 +94,24 @@ def main(args):
             optimizer.step()
 
             # Update loss and accuracy
-            train_loss += loss.item()
             log_iter_loss += loss.item()
             ps = torch.exp(output)
             top_p, top_class = ps.topk(1, dim=1)
             equals = top_class == labels.view(*top_class.shape)
-            train_accuracy += torch.mean(
-                equals.type(torch.FloatTensor)).item()
             log_iter_acc += torch.mean(
                 equals.type(torch.FloatTensor)).item()
 
             if index % args.log_iter == 0 and index != 0:
-                test_loss = 0
-                test_accuracy = 0
-                model.eval()
-                with torch.no_grad():
-                    for comments, labels in tqdm.tqdm(val_generator, total=len(val_generator), desc='Validation'):
-                        labels = torch.tensor(labels)
-                        if len(labels.size()) == 0:
-                            labels = torch.tensor([labels]).to(device)
-
-                        text_lengths = list(map(len, comments))
-                        padded = torch.nn.utils.rnn.pad_sequence(
-                            comments, batch_first=True)
-                        text_lengths = torch.tensor(text_lengths)
-
-                        out_val = model(padded, text_lengths)
-                        batch_loss = criterion(output, labels)
-                        test_loss += batch_loss.item()
-                        ps = torch.exp(out_val)
-                        top_p, top_class = ps.topk(1, dim=1)
-                        equals = top_class == labels.view(*top_class.shape)
-                        test_accuracy += torch.mean(
-                            equals.type(torch.FloatTensor)).item()
-                model.train()
-
                 # Tensorboard log
                 writer.add_scalar("Train_Accuracy",
-                                  train_mean_acc, index)
-                writer.add_scalar("Validation_Accuracy",
-                                  val_mean_acc, index)
+                                  log_iter_acc, index)
                 writer.add_scalar(
-                    "Train_loss", mean_train_loss, index)
-                writer.add_scalar(
-                    "Validation_loss", mean_test_loss, index)
-
-                # Reset values
-                log_iter_loss = 0
-                log_iter_acc = 0
+                    "Train_loss", log_iter_loss, index)
+                
 
                 # save model
                 state_dict_name = "{}_{}_{:.2f}_{:.2f}.pth".format(
-                    epoch, index, mean_test_loss, val_mean_acc)
+                    epoch, index, log_iter_loss, log_iter_acc)
                 path_model_state_dict = os.path.join(
                     args.log_dir, 'state_dict')
                 path_model_state_dict = os.path.join(
@@ -153,7 +120,40 @@ def main(args):
                 path_model = os.path.join(path_model, state_dict_name)
                 torch.save(model.state_dict(), path_model_state_dict)
                 torch.save(model, path_model)
+                log_iter_loss = 0
+                log_iter_acc = 0
+            
             index += 1
+
+        test_loss = 0
+        test_accuracy = 0
+        model.eval()
+        with torch.no_grad():
+            for comments, labels in tqdm.tqdm(val_generator, total=len(val_generator), desc='Validation'):
+                labels = torch.tensor(labels)
+                if len(labels.size()) == 0:
+                    labels = torch.tensor([labels]).to(device)
+
+                text_lengths = list(map(len, comments))
+                padded = torch.nn.utils.rnn.pad_sequence(
+                    comments, batch_first=True)
+                text_lengths = torch.tensor(text_lengths)
+
+                out_val = model(padded, text_lengths)
+                batch_loss = criterion(output, labels)
+                test_loss += batch_loss.item()
+                ps = torch.exp(out_val)
+                top_p, top_class = ps.topk(1, dim=1)
+                equals = top_class == labels.view(*top_class.shape)
+                test_accuracy += torch.mean(
+                    equals.type(torch.FloatTensor)).item()
+        writer.add_scalar("Validation_Accuracy",
+                                  val_mean_acc, epoch)
+        writer.add_scalar(
+                    "Validation_loss", mean_test_loss, epoch)
+        model.train()
+
+
 
 
 if __name__ == "__main__":

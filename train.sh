@@ -4,7 +4,7 @@ python3 train.py \
     --log_dir ./logs \
     --epochs 10 \
     --num_classes 2\
-    --batch_size 32 \
+    --batch_size 64 \
     --learning_rate 1e-4 \
-    --num_workers 0 \
-    --log_iter 1\
+    --num_workers 8 \
+    --log_iter 100\
