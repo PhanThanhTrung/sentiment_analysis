@@ -12,6 +12,7 @@ import torch
 #from transformers import AutoTokenizer
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 import tqdm
 from sklearn.metrics import (accuracy_score, classification_report,
                              confusion_matrix)
@@ -44,7 +45,7 @@ def binary_accuracy(preds, y):
     """
 
     #round predictions to the closest integer
-    rounded_preds = torch.round(torch.sigmoid(preds))
+    rounded_preds = torch.argmax(torch.softmax(preds, dim = 1), dim = 1)
     correct = (rounded_preds == y).float() #convert into float for division 
     acc = correct.sum() / len(correct)
     return acc
@@ -74,12 +75,13 @@ class PhoBERTLSTMSentiment(nn.Module):
         self.out = nn.Linear(hidden_dim * 2 if bidirectional else hidden_dim, output_dim)
         
         self.dropout = nn.Dropout(dropout)
+
         
     def forward(self, text):
         with torch.no_grad():
             embedded = self.phobert(text)[0]
         
-        _, hidden = self.rnn(embedded)
+        packed_output, (hidden, cell) = self.rnn(embedded)
         
         if self.rnn.bidirectional:
             hidden = self.dropout(torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = 1))
@@ -92,13 +94,13 @@ class PhoBERTLSTMSentiment(nn.Module):
 
 if __name__ == '__main__':
     HIDDEN_DIM = 256
-    OUTPUT_DIM = 1
+    OUTPUT_DIM = 2
     N_LAYERS = 2
     BIDIRECTIONAL = True
     DROPOUT = 0.25
-    SOURCE_FOLDER = '/root/dataset/sentiment_analysis/'
+    SOURCE_FOLDER = '/root/train_LSTM/sentiment_analysis/'
     BATCH_SIZE = 128
-    NUM_EPOCHS = 100
+    NUM_EPOCHS = 10
     LOG_ITER = 50
     log_dir = '/root/logs/'
 
@@ -130,7 +132,7 @@ if __name__ == '__main__':
                   eos_token = eos_token_idx,
                   pad_token = pad_token_idx,
                   unk_token = unk_token_idx)
-    LABEL = LabelField(dtype = torch.float, use_vocab =False)
+    LABEL = LabelField(dtype = torch.long, use_vocab =False)
     fields = [('data', TEXT), ('label', LABEL)]
     train, valid, test = TabularDataset.splits(path=SOURCE_FOLDER, train='train.csv', validation='validation.csv', test='test.csv',
                                            format='CSV', fields=fields, skip_header=True)
@@ -146,7 +148,7 @@ if __name__ == '__main__':
         os.makedirs(log_dir)
     writer = tensorboardX.SummaryWriter()
     optimizer = optim.Adam(model.parameters())
-    criterion = nn.BCEWithLogitsLoss()
+    criterion = nn.NLLLoss()
     model = model.to(device)
     criterion = criterion.to(device)
 
@@ -157,6 +159,8 @@ if __name__ == '__main__':
         epoch_acc = 0
         model.train()
         for batch in tqdm.tqdm(train_generator, desc = 'Training'):
+            #labels = torch.tensor(batch.label.cpu().detach().numpy().tolist())
+            #labels = F.one_hot(labels, num_classes = 2).to(device)
             optimizer.zero_grad()
             predictions = model(batch.data).squeeze(1)
             loss = criterion(predictions, batch.label)
@@ -190,7 +194,7 @@ if __name__ == '__main__':
                 writer.add_scalar('Validation_Loss', epoch_loss/len(val_generator), global_count)
                 
 
-                name = '{}_{}_{:.2f}.pth'.format(epoch, global_count, epoch_loss)
+                name = '{}_{}_{:.2f}.pth'.format(epoch, global_count, epoch_loss/len(val_generator))
                 epoch_loss = 0
                 epoch_acc = 0
                 path_model_state_dict = os.path.join(
