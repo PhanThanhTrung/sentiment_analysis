@@ -64,7 +64,7 @@ class PhoBERTLSTMSentiment(nn.Module):
         
         embedding_dim = phobert.config.to_dict()['hidden_size']
         
-        self.rnn = nn.GRU(embedding_dim,
+        self.rnn = nn.LSTM(embedding_dim,
                           hidden_dim,
                           num_layers = n_layers,
                           bidirectional = bidirectional,
