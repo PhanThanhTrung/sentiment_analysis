@@ -2,25 +2,19 @@ import logging
 import os
 import random
 from collections import Counter
-
-import matplotlib.pyplot as plt
+from re import S
 import numpy as np
-import pandas as pd
-import seaborn as sns
 import tensorboardX
 import torch
-#from transformers import AutoTokenizer
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import tqdm
-from sklearn.metrics import (accuracy_score, classification_report,
-                             confusion_matrix)
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+from phobert_lstm import phobert_lstm
 from torchtext.legacy.data import (BucketIterator, Field, LabelField,
                                    TabularDataset)
-from torchtext.vocab import Vocab
-from transformers import AutoModel, AutoTokenizer
+
+from transformers import AutoTokenizer
 from clearml import Task
 
 task = Task.init(project_name='sentiment_analysis',
@@ -43,76 +37,35 @@ def binary_accuracy(preds, y):
     """
         Returns accuracy per batch, i.e. if you get 8/10 right, this returns 0.8, NOT 8
     """
-
     #round predictions to the closest integer
     rounded_preds = torch.argmax(torch.softmax(preds, dim = 1), dim = 1)
     correct = (rounded_preds == y).float() #convert into float for division 
     acc = correct.sum() / len(correct)
     return acc
 
-class PhoBERTLSTMSentiment(nn.Module):
-    def __init__(self,
-                 phobert,
-                 hidden_dim,
-                 output_dim,
-                 n_layers,
-                 bidirectional,
-                 dropout):
-        
-        super().__init__()
-        
-        self.phobert = phobert
-        
-        embedding_dim = phobert.config.to_dict()['hidden_size']
-        
-        self.rnn = nn.LSTM(embedding_dim,
-                          hidden_dim,
-                          num_layers = n_layers,
-                          bidirectional = bidirectional,
-                          batch_first = True,
-                          dropout = 0 if n_layers < 2 else dropout)
-        
-        self.out = nn.Linear(hidden_dim * 2 if bidirectional else hidden_dim, output_dim)
-        
-        self.dropout = nn.Dropout(dropout)
-
-        
-    def forward(self, text):
-        with torch.no_grad():
-            embedded = self.phobert(text)[0]
-        
-        packed_output, (hidden, cell) = self.rnn(embedded)
-        
-        if self.rnn.bidirectional:
-            hidden = self.dropout(torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim = 1))
-        else:
-            hidden = self.dropout(hidden[-1,:,:])
-        
-        output = self.out(hidden)
-        
-        return output
-
 if __name__ == '__main__':
-    HIDDEN_DIM = 256
-    OUTPUT_DIM = 2
-    N_LAYERS = 2
-    BIDIRECTIONAL = True
-    DROPOUT = 0.25
+    hidden_dim = 256
+    num_classes = 2
+    n_layers = 2
+    bidirectional = True
+    dropout = 0.25
+    source_file = '/home/miles/HIT/sentiment_analysis/test.txt'
+    state_dict_path = None
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    phobert_path = "vinai/phobert-base"
     SOURCE_FOLDER = '/root/dataset/sentiment_analysis/'
     BATCH_SIZE = 128
     NUM_EPOCHS = 100
-    LOG_ITER = 50
     log_dir = '/root/logs/'
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    phobert = AutoModel.from_pretrained("vinai/phobert-base")
-    model = PhoBERTLSTMSentiment(phobert,
-                            HIDDEN_DIM,
-                            OUTPUT_DIM,
-                            N_LAYERS,
-                            BIDIRECTIONAL,
-                            DROPOUT)
-    
+    model = phobert_lstm(phobert_path,
+                         state_dict_path,
+                         hidden_dim,
+                         num_classes,
+                         n_layers,
+                         bidirectional,
+                         dropout,
+                         device)
     
     tokenizer = AutoTokenizer.from_pretrained("vinai/phobert-base", use_fast=False)
     init_token = tokenizer.cls_token
@@ -149,9 +102,6 @@ if __name__ == '__main__':
     writer = tensorboardX.SummaryWriter()
     optimizer = optim.Adam(model.parameters(), lr = 1e-4)
     criterion = nn.CrossEntropyLoss()
-    state_dict = torch.load('/root/model_weight/1_450_0.31.pth')
-    model.to(device)
-    model.load_state_dict(state_dict)
     criterion = criterion.to(device)
     global_count = 0
     for epoch in range(NUM_EPOCHS):
@@ -160,8 +110,6 @@ if __name__ == '__main__':
         epoch_acc = 0
         model.train()
         for batch in tqdm.tqdm(train_generator, desc = 'Training'):
-            #labels = torch.tensor(batch.label.cpu().detach().numpy().tolist())
-            #labels = F.one_hot(labels, num_classes = 2).to(device)
             optimizer.zero_grad()
             predictions = model(batch.data).squeeze(1)
             loss = criterion(predictions, batch.label)

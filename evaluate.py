@@ -4,25 +4,14 @@ import random
 from collections import Counter
 
 import glob
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import seaborn as sns
-import tensorboardX
 import torch
-#from transformers import AutoTokenizer
 import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
 import tqdm
-from sklearn.metrics import (accuracy_score, classification_report,
-                             confusion_matrix)
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from torchtext.legacy.data import (BucketIterator, Field, LabelField,
                                    TabularDataset)
-from torchtext.vocab import Vocab
-from transformers import AutoModel, AutoTokenizer
-
+from transformers import AutoTokenizer
+from phobert_lstm import phobert_lstm
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
