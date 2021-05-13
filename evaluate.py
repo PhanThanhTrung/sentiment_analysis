@@ -3,6 +3,7 @@ import os
 import random
 from collections import Counter
 
+import glob
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -21,10 +22,6 @@ from torchtext.legacy.data import (BucketIterator, Field, LabelField,
                                    TabularDataset)
 from torchtext.vocab import Vocab
 from transformers import AutoModel, AutoTokenizer
-from clearml import Task
-
-task = Task.init(project_name='sentiment_analysis',
-                 task_name='29042021_LSTM_bidirectional_2layer_phoBERT')
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -144,42 +141,26 @@ if __name__ == '__main__':
             device = device, sort = False)
     
     
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-    writer = tensorboardX.SummaryWriter()
-    optimizer = optim.Adam(model.parameters(), lr = 1e-4)
     criterion = nn.CrossEntropyLoss()
-    state_dict = torch.load('/root/model_weight/1_450_0.31.pth')
-    model.to(device)
-    model.load_state_dict(state_dict)
+    
     criterion = criterion.to(device)
-    global_count = 0
-    for epoch in range(NUM_EPOCHS):
-        logger.info('Training on epoch {}'.format(epoch+1))
+    all_statedict_path = glob.glob('/root/logs/*.pth')
+    for state_dict_path in all_statedict_path:
+        print(state_dict_path)
         epoch_loss = 0
         epoch_acc = 0
-        model.train()
-        for batch in tqdm.tqdm(train_generator, desc = 'Training'):
-            #labels = torch.tensor(batch.label.cpu().detach().numpy().tolist())
-            #labels = F.one_hot(labels, num_classes = 2).to(device)
-            optimizer.zero_grad()
-            predictions = model(batch.data).squeeze(1)
-            loss = criterion(predictions, batch.label)
-            loss.backward()
-            optimizer.step()
-            acc = binary_accuracy(predictions, batch.label)
-            epoch_loss += loss.item()
-            epoch_acc += acc.item()
-
-            
-        writer.add_scalar('Training_Accuracy', epoch_acc/len(train_generator), global_count)
-        writer.add_scalar('Training_Loss', epoch_loss/len(train_generator), global_count)
-        epoch_loss = 0
-        epoch_acc = 0
-        
+        state_dict = torch.load(state_dict_path)
+        model = PhoBERTLSTMSentiment(phobert,
+                                HIDDEN_DIM,
+                                OUTPUT_DIM,
+                                N_LAYERS,
+                                BIDIRECTIONAL,
+                                DROPOUT)
+        model.to(device)
+        model.load_state_dict(state_dict)
         model.eval()
         with torch.no_grad():
-            for batch in tqdm.tqdm(val_generator, desc = "Validation"):
+            for batch in tqdm.tqdm(test_generator, desc = "Validation"):
                 predictions = model(batch.data).squeeze(1)
                 
                 loss = criterion(predictions, batch.label)
@@ -188,12 +169,7 @@ if __name__ == '__main__':
 
                 epoch_loss += loss.item()
                 epoch_acc += acc.item()
-        writer.add_scalar('Validation_Accuracy', epoch_acc/len(val_generator), global_count)
-        writer.add_scalar('Validation_Loss', epoch_loss/len(val_generator), global_count)
-        
+        print('Validation_Accuracy ', epoch_acc/len(test_generator))
+        print('Validation_Loss ', epoch_loss/len(test_generator))
+    
 
-        name = '{}_{}_{:.2f}.pth'.format(epoch, global_count, epoch_loss/len(val_generator))
-        path_model_state_dict = os.path.join(
-            log_dir, name)
-        torch.save(model.state_dict(), path_model_state_dict)
-        global_count+=1
