@@ -49,7 +49,6 @@ if __name__ == '__main__':
     n_layers = 2
     bidirectional = True
     dropout = 0.25
-    source_file = '/home/miles/HIT/sentiment_analysis/test.txt'
     state_dict_path = None
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     phobert_path = "vinai/phobert-base"
