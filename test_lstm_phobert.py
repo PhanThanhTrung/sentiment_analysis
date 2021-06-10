@@ -1,5 +1,10 @@
+import warnings
+import sys
+if not sys.warnoptions:
+    warnings.simplefilter("ignore")
+
 import torch
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoTokenizer
 from CocCocTokenizer import PyTokenizer
 import torch.nn as nn
 import logging
@@ -62,6 +67,7 @@ if __name__ == '__main__':
         all_data = f.readlines()
     with torch.no_grad():
         for sentence in all_data:
+            sentence = sentence.strip('\n').strip(' ')
             sentence = ' '.join(T.word_tokenize(sentence, tokenize_option=0))
             tokens = tokenizer.tokenize(sentence)
             tokens = tokens[:256-2]
@@ -74,3 +80,5 @@ if __name__ == '__main__':
             y_pred = y_pred.squeeze()
             softmax_pred = torch.softmax(y_pred, dim=0)
             predict_class = LABELS[torch.argmax(softmax_pred)]
+            print(sentence, " ", predict_class, " ", torch.max(softmax_pred).item())
+            print('')
