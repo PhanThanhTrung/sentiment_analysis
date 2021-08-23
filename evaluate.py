@@ -54,8 +54,8 @@ if __name__ == '__main__':
     tokenizer = AutoTokenizer.from_pretrained(phobert_path, use_fast=False)
     init_token = tokenizer.cls_token
     eos_token = tokenizer.sep_token
-    pad_token = tokenizer.pad_token
-    unk_token = tokenizer.unk_token
+    
+    
     init_token_idx = tokenizer.convert_tokens_to_ids(init_token)
     eos_token_idx = tokenizer.convert_tokens_to_ids(eos_token)
     pad_token_idx = tokenizer.convert_tokens_to_ids(pad_token)
@@ -91,8 +91,7 @@ if __name__ == '__main__':
                              state_dict_path=state_dict_path,
                              hidden_dim=hidden_dim,
                              num_classes=num_classes,
-                             n_layers=n_layers,
-                             bidirectional=bidirectional,
+                             
                              dropout=dropout,
                              device=device)
         model.eval()
@@ -104,5 +103,16 @@ if __name__ == '__main__':
 
                 epoch_loss += loss.item()
                 epoch_acc += acc.item()
-        print('Evaluating Accuracy ', epoch_acc/len(test_generator))
+        
+
+      model.eval()
+        with torch.no_grad():
+            for batch in tqdm.tqdm(test_generator, desc="Evaluating"):
+                predictions = model(batch.data).squeeze(1)
+                loss = criterion(predictions, batch.label)
+                acc = binary_accuracy(predictions, batch.label)
+
+                epoch_loss += loss.item()
+                epoch_acc += acc.item()  
+
         print('Evaluating Loss ', epoch_loss/len(test_generator))
