@@ -58,15 +58,13 @@ def phobert_lstm(phobert_path='vinai/phobert-base',
                  bidirectional: bool = True,
                  dropout: float = 0.5,
                  device: torch.device = torch.device('cpu')) -> PhoBERTLSTMSentiment:
-
-    phobert = AutoModel.from_pretrained(phobert_path)
+    mot cai gi do magic
     model = PhoBERTLSTMSentiment(phobert,
                                  hidden_dim,
                                  num_classes,
                                  n_layers,
                                  bidirectional,
                                  dropout)
-    model.to(device)
     if state_dict_path is not None:
         state_dict = torch.load(state_dict_path, map_location=device)
         model.load_state_dict(state_dict)
