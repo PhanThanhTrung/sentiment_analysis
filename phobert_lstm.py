@@ -58,7 +58,7 @@ def phobert_lstm(phobert_path='vinai/phobert-base',
                  bidirectional: bool = True,
                  dropout: float = 0.5,
                  device: torch.device = torch.device('cpu')) -> PhoBERTLSTMSentiment:
-    mot cai gi do magic
+        
     model = PhoBERTLSTMSentiment(phobert,
                                  hidden_dim,
                                  num_classes,
